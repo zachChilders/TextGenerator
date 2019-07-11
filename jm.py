@@ -6,7 +6,7 @@ import numpy as np
 import os
 import time
 
-EPOCHS=30
+EPOCHS = 400
 
 BATCH_SIZE = 64
 BUFFER_SIZE = 10000
@@ -14,6 +14,8 @@ SEQ_LENGTH = 100
 
 EMBEDDING_DIM = 256
 RNN_UNITS = 1024
+
+TEMPERATURE = 0.5
 
 CHECKPOINT_DIR = './training_checkpoints'
 CHECKPOINT_PREFIX= os.path.join(CHECKPOINT_DIR, "ckpt_{epoch}")
@@ -34,7 +36,7 @@ def generate_text(model, start_string, char_index, index):
   # Low temperatures results in more predictable text.
   # Higher temperatures results in more surprising text.
   # Experiment to find the best setting.
-  temperature = 1.0
+  temperature = TEMPERATURE
 
   # Here batch size == 1
   model.reset_states()
@@ -75,6 +77,8 @@ def build_model(vocab_size, embedding_dim, rnn_units, batch_size):
 def loss(labels, logits):
   return tf.keras.losses.sparse_categorical_crossentropy(labels, logits, from_logits=True)
 
+# Enable eager execution
+tf.enable_eager_execution()
 
 # Get input data, currently shakespeare
 path_to_file = tf.keras.utils.get_file('shakespeare.txt', 'https://storage.googleapis.com/download.tensorflow.org/data/shakespeare.txt')
@@ -90,33 +94,48 @@ index_to_character = np.array(vocab)
 text_as_int = np.array([character_to_index[c] for c in text])
 
 # Determine sequence length per epoch
-examples_per_epoch = len(text) / SEQ_LENGTH
+examples_per_epoch = len(text) // SEQ_LENGTH
 
 # Batch size 
-
-steps_per_epoch = examples_per_epoch/BATCH_SIZE
+steps_per_epoch = examples_per_epoch // BATCH_SIZE
 
 # Make training examples 
 char_dataset = tf.data.Dataset.from_tensor_slices(text_as_int)
-sequences = char_dataset.batch(SEQ_LENGTH+1, drop_remainder=True)
+sequences = char_dataset.batch(SEQ_LENGTH + 1, drop_remainder=True)
 
 dataset = sequences.map(split_input_target)
-dataset = dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE, drop_remainder=True)
 
 # Build RNN
 if tf.test.is_gpu_available():
+  print("Using GPU")
   rnn = tf.keras.layers.CuDNNGRU
 else:
   import functools
   rnn = functools.partial(
     tf.keras.layers.GRU, recurrent_activation='sigmoid')
 
-# Build Model
-model = build_model(
-  vocab_size = len(vocab), 
-  embedding_dim=EMBEDDING_DIM, 
-  rnn_units=RNN_UNITS, 
-  batch_size=BATCH_SIZE)
+# Load last checkpoint
+latest_weight = tf.train.latest_checkpoint(CHECKPOINT_DIR)
+if latest_weight:
+    # Prep Data
+    dataset = dataset.shuffle(BUFFER_SIZE).batch(1, drop_remainder=True)
+
+    # Build Model
+    model = build_model(len(vocab), EMBEDDING_DIM, RNN_UNITS, batch_size=1)
+    model.load_weights(latest_weight)
+    print(f"Resuming from {latest_weight.split('_')[-1]}")
+
+# Fresh run
+else:
+    # Prep Data
+    dataset = dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE, drop_remainder=True)
+
+    # Build Model
+    model = build_model(
+        vocab_size = len(vocab),
+        embedding_dim=EMBEDDING_DIM,
+        rnn_units=RNN_UNITS,
+        batch_size=BATCH_SIZE)
 
 # Compile model
 model.compile(
@@ -129,15 +148,15 @@ checkpoint_callback=tf.keras.callbacks.ModelCheckpoint(
     save_weights_only=True)
 
 # Train model
-history = model.fit(dataset.repeat(), 
-                        epochs=EPOCHS, 
-                        steps_per_epoch=steps_per_epoch, 
-                        callbacks=[checkpoint_callback])
+history = model.fit(dataset.repeat(),
+    epochs=EPOCHS,
+    initial_epoch = int(latest_weight.split('_')[-1]) if latest_weight else 0,
+    steps_per_epoch=steps_per_epoch,
+    callbacks=[checkpoint_callback])
 
-# Who knows what this is doing?
-model = build_model(len(vocab), EMBEDDING_DIM, RNN_UNITS, batch_size=1)
-model.load_weights(tf.train.latest_checkpoint(CHECKPOINT_DIR))
-model.build(tf.TensorShape([1, None]))
+print("Training Done")
+#model.build(tf.TensorShape([1, None]))
 
+print("Predicting")
 # Generate the text
 print(generate_text(model, u"ROMEO: ", character_to_index, index_to_character))
