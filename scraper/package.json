@@ -1,0 +1,37 @@
+{
+  "name": "scraper",
+  "version": "1.0.0",
+  "description": "Scrape news articles for text generation",
+  "main": "index.ts",
+  "scripts": {
+    "test": "jest --forceExit --coverage --verbose",
+    "start": "npm run serve",
+    "build": "npm run build-ts && npm run tslint",
+    "serve": "node dist/index.js",
+    "watch-node": "nodemon dist/index.js",
+    "watch": "concurrently -k -p \"[{name}]\" -n \"TypeScript,Node\" -c \"cyan.bold,yellow.bold\" \"npm run watch-ts\" \"npm run watch-node\"",
+    "watch-test": "npm run test -- --watchAll",
+    "build-ts": "tsc",
+    "watch-ts": "tsc -w",
+    "tslint": "tslint -c tslint.json -p tsconfig.json --exclude \"**/*.json\"",
+    "debug": "npm run build && npm run watch-debug",
+    "serve-debug": "nodemon --inspect dist/index.js",
+    "watch-debug": "concurrently -k -p \"[{name}]\" -n \"TypeScript,Node\" -c \"cyan.bold,green.bold\" \"npm run watch-ts\" \"npm run serve-debug\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "."
+  },
+  "dependencies": {
+    "@types/node": "^12.6.2",
+    "concurrently": "^4.1.1",
+    "node-fetch": "",
+    "nodemon": "^1.19.1"
+  },
+  "devDependencies": {
+    "tslint": "",
+    "typescript": ""
+  },
+  "author": "",
+  "license": "ISC"
+}
