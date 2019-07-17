@@ -1,29 +1,34 @@
-import Parser from "rss-parser";
-import fetch from "node-fetch"; 
-import { resolve } from "dns";
-import { parse } from "node-html-parser";
 
-const uri = "https://www.reddit.com/r/news.rss"
+import cheerio from "cheerio";
+import fetch from "node-fetch";
 
+const uri = "https://www.reddit.com/r/news/.json";
 
-export async function readFeed() {
-  const parser = new Parser();
-  let feed = await parser.parseURL(uri);
-  console.log(feed.title);
-
-    feed.items!.forEach(item => {
-      fetch(item.link)
-        .then(body => {
-          body.text().then(txt =>
-            {
-              console.log(parse(txt).childNodes.toString());
-            });
-        });
+export function handleUrl(url: string) {
+  fetch(url)
+  .then( (page) => {
+    return page.text();
   })
+  .then ( (html) => {
+    const $ = cheerio.load(html);
+    console.log($("p").text()); // We should probably be smarter than <p>
+  });
 }
 
-// export async function visit(uri: string | undefined) {
-//   return fetch(uri);
-// }
+export function readFeed() {
+  fetch(uri)
+  .then( (body) => {
+    return body.json();
+  })
+  .then( (src) => {
+    return src.data.children;
+  })
+  .then( (children) => {
+    children.forEach( (post: { data: { url: string; }; }) => {
+      handleUrl(post.data.url);
+    });
+  });
+
+}
 
 readFeed();
