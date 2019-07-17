@@ -6,6 +6,7 @@ const uri = "https://www.reddit.com/r/news/.json";
 
 export function handleUrl(url: string) {
   fetch(url)
+  .then( (x) => new Promise( (resolve) => setTimeout(() => resolve(x), 2000)))
   .then( (page) => {
     return page.text();
   })
