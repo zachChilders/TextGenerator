@@ -2,8 +2,9 @@
 import cheerio from "cheerio";
 import fetch from "node-fetch";
 
-const uri = "https://www.reddit.com/r/news/.json";
+const uri = "https://www.reddit.com/r/news+worldnews+politics/.json";
 
+// Handle each link in the reddit feed
 export function handleUrl(url: string) {
   fetch(url)
   .then( (x) => new Promise( (resolve) => setTimeout(() => resolve(x), 2000)))
@@ -16,6 +17,7 @@ export function handleUrl(url: string) {
   });
 }
 
+// Read a reddit feed
 export function readFeed() {
   fetch(uri)
   .then( (body) => {
