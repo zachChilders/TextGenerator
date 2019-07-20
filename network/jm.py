@@ -17,7 +17,7 @@ RNN_UNITS = 1024
 
 TEMPERATURE = 0.5
 
-CHECKPOINT_DIR = './training_checkpoints'
+CHECKPOINT_DIR = './generator_checkpoints'
 CHECKPOINT_PREFIX= os.path.join(CHECKPOINT_DIR, "ckpt_{epoch}")
 
 def generate_text(model, start_string, char_index, index):
@@ -81,7 +81,7 @@ def loss(labels, logits):
 tf.enable_eager_execution()
 
 # Get input data, currently shakespeare
-path_to_file = tf.keras.utils.get_file('shakespeare.txt', 'https://storage.googleapis.com/download.tensorflow.org/data/shakespeare.txt')
+path_to_file = '../mergetool/articles.txt'
 text = open(path_to_file, 'rb').read().decode(encoding='utf-8')
 
 # Define vocabulary, currently by character
