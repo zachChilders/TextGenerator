@@ -1,0 +1,41 @@
+{
+  "name": "mergetool",
+  "version": "1.0.0",
+  "description": "Merges Documents from Cosmos DB into a single file for easy ingestion",
+  "main": "index.ts",
+  "scripts": {
+    "test": "jest --forceExit --coverage --verbose",
+    "start": "npm run serve",
+    "build": "npm run build-ts && npm run tslint",
+    "serve": "node dist/index.js",
+    "watch-node": "nodemon dist/index.js",
+    "watch": "concurrently -k -p \"[{name}]\" -n \"TypeScript,Node\" -c \"cyan.bold,yellow.bold\" \"npm run watch-ts\" \"npm run watch-node\"",
+    "watch-test": "npm run test -- --watchAll",
+    "build-ts": "tsc",
+    "watch-ts": "tsc -w",
+    "tslint": "tslint -c tslint.json -p tsconfig.json --exclude \"**/*.json\"",
+    "debug": "npm run build && npm run watch-debug",
+    "serve-debug": "nodemon --inspect dist/index.js",
+    "watch-debug": "concurrently -k -p \"[{name}]\" -n \"TypeScript,Node\" -c \"cyan.bold,green.bold\" \"npm run watch-ts\" \"npm run serve-debug\""
+  },
+  "dependencies": {
+    "@types/cheerio": "^0.22.12",
+    "@types/express": "^4.17.0",
+    "@types/mongodb": "^3.1.28",
+    "@types/node": "^12.6.2",
+    "@types/node-fetch": "^2.3.7",
+    "cheerio": "^1.0.0-rc.3",
+    "express": "^4.17.1",
+    "fetch": "^1.1.0",
+    "mongodb": "^3.2.7",
+    "node-fetch": ""
+  },
+  "devDependencies": {
+    "concurrently": "^4.1.1",
+    "tslint": "",
+    "typescript": "",
+    "nodemon": "^1.19.1"
+  },
+  "author": "",
+  "license": "ISC"
+}
