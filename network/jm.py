@@ -1,21 +1,22 @@
 from __future__ import absolute_import, division, print_function
 
 import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
 
 import numpy as np
 import os
 import time
 
-EPOCHS = 400
+EPOCHS = 5
 
-BATCH_SIZE = 64
+BATCH_SIZE = 128
 BUFFER_SIZE = 10000
 SEQ_LENGTH = 100
 
 EMBEDDING_DIM = 256
-RNN_UNITS = 1024
+RNN_UNITS = 256
 
-TEMPERATURE = 0.5
+TEMPERATURE = 0.1
 
 CHECKPOINT_DIR = './generator_checkpoints'
 CHECKPOINT_PREFIX= os.path.join(CHECKPOINT_DIR, "ckpt_{epoch}")
@@ -47,7 +48,7 @@ def generate_text(model, start_string, char_index, index):
 
       # using a multinomial distribution to predict the word returned by the model
       predictions = predictions / temperature
-      predicted_id = tf.multinomial(predictions, num_samples=1)[-1,0].numpy()
+      predicted_id = tf.random.categorical(predictions, num_samples=1)[-1,0].numpy()
      
       # We pass the predicted word as the next input to the model
       # along with the previous hidden state
@@ -77,11 +78,11 @@ def build_model(vocab_size, embedding_dim, rnn_units, batch_size):
 def loss(labels, logits):
   return tf.keras.losses.sparse_categorical_crossentropy(labels, logits, from_logits=True)
 
-# Enable eager execution
-tf.enable_eager_execution()
+tf.compat.v1.enable_eager_execution()
+tf.logging.set_verbosity(tf.logging.ERROR)
 
 # Get input data, currently shakespeare
-path_to_file = '../mergetool/articles.txt'
+path_to_file = "../mergetool/articles.txt"
 text = open(path_to_file, 'rb').read().decode(encoding='utf-8')
 
 # Define vocabulary, currently by character
@@ -93,6 +94,7 @@ index_to_character = np.array(vocab)
 
 text_as_int = np.array([character_to_index[c] for c in text])
 
+print("Dataset loaded")
 # Determine sequence length per epoch
 examples_per_epoch = len(text) // SEQ_LENGTH
 
@@ -108,7 +110,7 @@ dataset = sequences.map(split_input_target)
 # Build RNN
 if tf.test.is_gpu_available():
   print("Using GPU")
-  rnn = tf.keras.layers.CuDNNGRU
+  rnn = tf.compat.v1.keras.layers.CuDNNGRU
 else:
   import functools
   rnn = functools.partial(
@@ -139,7 +141,7 @@ else:
 
 # Compile model
 model.compile(
-    optimizer = tf.train.AdamOptimizer(),
+    optimizer = tf.compat.v1.train.AdamOptimizer(),
     loss = loss)
 
 # Define checkpoint callback
@@ -148,7 +150,7 @@ checkpoint_callback=tf.keras.callbacks.ModelCheckpoint(
     save_weights_only=True)
 
 # Train model
-history = model.fit(dataset.repeat(),
+history = model.fit(dataset,
     epochs=EPOCHS,
     initial_epoch = int(latest_weight.split('_')[-1]) if latest_weight else 0,
     steps_per_epoch=steps_per_epoch,
@@ -158,5 +160,13 @@ print("Training Done")
 #model.build(tf.TensorShape([1, None]))
 
 print("Predicting")
+
 # Generate the text
-print(generate_text(model, u"ROMEO: ", character_to_index, index_to_character))
+stories = []
+
+for i in range(1,5):
+  stories.append(generate_text(model, u"Yesterday in Florida ", character_to_index, index_to_character))
+
+for story in stories:
+  print(story)
+
