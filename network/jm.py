@@ -78,8 +78,10 @@ def build_model(vocab_size, embedding_dim, rnn_units, batch_size):
 def loss(labels, logits):
   return tf.keras.losses.sparse_categorical_crossentropy(labels, logits, from_logits=True)
 
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
 tf.compat.v1.enable_eager_execution()
-tf.logging.set_verbosity(tf.logging.ERROR)
 
 # Get input data, currently shakespeare
 path_to_file = "../mergetool/articles.txt"
