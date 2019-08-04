@@ -1,10 +1,12 @@
 
 import cheerio from "cheerio";
-import express from "express";
+import fs from "fs";
 import { MongoClient } from "mongodb";
 import fetch from "node-fetch";
+import readline from "readline";
 
-const connstring = process.env.APPSETTING_SCRAPER_CONNSTRING || "";
+// tslint:disable-next-line:max-line-length
+const connstring = process.env.APPSETTING_SCRAPER_CONNSTRING || "mongodb://mics207:yawQXcYvDTqEMe3SMnI4m2VHiac59zPsIQp7GK4TVlO86haoY5H6jjrS1dHUcCqHLJnMGuxjxgHuDqy7tOcaMQ==@mics207.documents.azure.com:10255/?ssl=true&replicaSet=globaldb";
 const port = 80;
 
 // MongoDB Schema
@@ -13,16 +15,18 @@ interface IArticle {
   body: string;
 }
 
+// Parse a news article
+export async function parseArticle(article: string): Promise<string> {
+  const $ = await cheerio.load(article);
+  return $("p").text();
+}
+
 // Handle each link in the reddit feed
 export async function handleUrl(url: string): Promise<IArticle> {
-  return fetch(url)
-    .then( (page) => { // Get html of the page
-      return page.text();
-    })
-    .then ( (html) => { // Grab all text in the article
-      const $ = cheerio.load(html);
-      return {url, body: $("p").text()} ; // We should probably be smarter than <p>
-    });
+  const response = await fetch(url);
+  const html = await response.text();
+  const article = await parseArticle(html);
+  return {url, body: article} ; // We should probably be smarter than <p>
 }
 
 // Read a reddit feed
@@ -65,10 +69,30 @@ export async function readFeed() {
     .catch((err) => console.log(err));
 }
 
-console.log(`connstring: ${connstring}`);
-// Run
-setInterval(() => { readFeed(); }, 20000);
+export async function readTsv() {
+  // Setup MongoDB connection
+  const client = await MongoClient.connect(connstring, {useNewUrlParser: true});
+  const db = client.db("articles");
 
-express()
-  .get("/keepalive", (req, res) => res.send(`Alive\n${new Date()}`))
-  .listen(port, () => console.log(`Listening on port ${port}!`));
+  const minimumArticleLength = Number(process.env.APPSETTING_SCRAPER_MIN_ARTICLE_LENGTH) || 250;
+  const lineReader = readline.createInterface({
+    input: fs.createReadStream("/home/zach/Documents/urls.csv"),
+  });
+
+  lineReader.on("line", async (line: string) => {
+      // See if we've scrapped this URL before
+      // New article, scrape it.
+      const article = await handleUrl(line).catch((err) => console.log(`${line} down: ${err}`));
+      // Filter out shorter text.
+      if (article) {
+        if (article.body.length > minimumArticleLength) {
+          console.log(`Adding ${line} to DB`);
+          await db.collection("reddit").insertOne(article);
+        }
+       }
+  });
+  console.log("Read");
+}
+
+console.log(`connstring: ${connstring}`);
+readTsv();
