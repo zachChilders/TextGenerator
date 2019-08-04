@@ -6,6 +6,7 @@ from keras.backend.tensorflow_backend import set_session
 import numpy as np
 import os
 import time
+import re
 
 EPOCHS = 5
 
@@ -20,6 +21,20 @@ TEMPERATURE = 0.1
 
 CHECKPOINT_DIR = './generator_checkpoints'
 CHECKPOINT_PREFIX= os.path.join(CHECKPOINT_DIR, "ckpt_{epoch}")
+
+def sanitize(text):
+  # Split articles for individual processing
+  articles = text.split("\n\n\n")
+
+  # Limit article length to remove bias
+  new_articles = [article[:500] for article in articles]
+
+  # Attempt to remove Links
+  #clean_articles = [re.sub("https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)", "", article) for article in new_articles]
+  
+  final_articles = " ".join(new_articles)
+  return " ".join(final_articles.split())
+
 
 def generate_text(model, start_string, char_index, index):
   # Evaluation step (generating text using the learned model)
@@ -79,10 +94,17 @@ def loss(labels, logits):
   return tf.keras.losses.sparse_categorical_crossentropy(labels, logits, from_logits=True)
 
 # Enable eager execution
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+tf.compat.v1.enable_eager_execution()
 
 # Get input data, currently shakespeare
-path_to_file = "../mergetool/articles.txt"
+path_to_file = "../mergetool/dev-articles.txt"
 text = open(path_to_file, 'rb').read().decode(encoding='utf-8')
+
+text = sanitize(text)
+print(text)
 
 # Define vocabulary, currently by character
 vocab = sorted(set(text))
