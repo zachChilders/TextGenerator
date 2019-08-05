@@ -17,7 +17,7 @@ SEQ_LENGTH = 100
 EMBEDDING_DIM = 256
 RNN_UNITS = 256
 
-TEMPERATURE = 0.1
+TEMPERATURE = 0.5
 
 CHECKPOINT_DIR = './generator_checkpoints'
 CHECKPOINT_PREFIX= os.path.join(CHECKPOINT_DIR, "ckpt_{epoch}")
@@ -27,11 +27,14 @@ def sanitize(text):
   articles = text.split("\n\n\n")
 
   # Limit article length to remove bias
-  new_articles = [article[:500] for article in articles]
+  new_articles = [article[:1500] for article in articles]
 
   # Attempt to remove Links
-  #clean_articles = [re.sub("https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)", "", article) for article in new_articles]
+  clean_articles = [re.sub("https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)", "", article) for article in new_articles]
   
+  for article in new_articles:
+    print(len(article))
+
   final_articles = " ".join(new_articles)
   return " ".join(final_articles.split())
 
@@ -104,7 +107,6 @@ path_to_file = "../mergetool/dev-articles.txt"
 text = open(path_to_file, 'rb').read().decode(encoding='utf-8')
 
 text = sanitize(text)
-print(text)
 
 # Define vocabulary, currently by character
 vocab = sorted(set(text))
